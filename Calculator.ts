@@ -12,4 +12,37 @@ write tests you did not think about
 4. Remember to refactor after each passing tes
  */
 
-export class StringCalculator {}
+export class StringCalculator {
+  private static callCount = 0
+
+  public add(numbers: string): number {
+    StringCalculator.callCount++
+
+    if (numbers === "") {
+      return 0
+    }
+
+    // Split the input by comma
+    const tokens = numbers.split(",")
+    const parsedNumbers: number[] = []
+    const negatives: number[] = []
+
+    for (const token of tokens) {
+      const num = parseInt(token, 10)
+      if (num < 0) {
+        negatives.push(num)
+      }
+      parsedNumbers.push(num)
+    }
+
+    if (negatives.length > 0) {
+      throw new Error(`negatives not allowed: ${negatives.join(", ")}`)
+    }
+
+    return parsedNumbers.reduce((sum, num) => sum + num, 0)
+  }
+
+  public getCalledCount(): number {
+    return StringCalculator.callCount
+  }
+}
