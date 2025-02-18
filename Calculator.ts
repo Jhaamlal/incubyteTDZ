@@ -13,36 +13,61 @@ write tests you did not think about
  */
 
 export class StringCalculator {
-  private static callCount = 0
+  private callCount = 0
+  public addOccurred: Array<(input: string, result: number) => void> = []
 
   public add(numbers: string): number {
-    StringCalculator.callCount++
+    this.callCount++
+    let delimiters: string[] = [",", "\n"]
+    let numStr = numbers
 
-    if (numbers === "") {
-      return 0
-    }
+    // Custom delimiter support
+    if (numbers.startsWith("//")) {
+      const delimEndIndex = numbers.indexOf("\n")
+      const delimSpec = numbers.substring(2, delimEndIndex)
 
-    // Split the input by comma
-    const tokens = numbers.split(",")
-    const parsedNumbers: number[] = []
-    const negatives: number[] = []
+      // Delimiters  square brackets.
 
-    for (const token of tokens) {
-      const num = parseInt(token, 10)
-      if (num < 0) {
-        negatives.push(num)
+      if (delimSpec.startsWith("[") && delimSpec.endsWith("]")) {
+        // Match one or more delimiters of any length with rejex
+        const delimiterMatches = delimSpec.match(/\[(.*?)\]/g)
+        if (delimiterMatches) {
+          delimiters = delimiterMatches.map((d) => d.slice(1, -1))
+        }
+      } else {
+        // Single-character delimiter
+        delimiters = [delimSpec]
       }
-      parsedNumbers.push(num)
+      numStr = numbers.substring(delimEndIndex + 1)
     }
 
+    // Escape delimiters for regex
+    const escapedDelimiters = delimiters.map((delim) =>
+      delim.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")
+    )
+    const regexPattern = new RegExp(escapedDelimiters.join("|"), "g")
+    const tokens = numStr.split(regexPattern).filter((val) => val !== "")
+
+    const nums = tokens.map((token) => parseInt(token, 10))
+
+    // Check for negatives
+    const negatives = nums.filter((n) => n < 0)
     if (negatives.length > 0) {
-      throw new Error(`negatives not allowed: ${negatives.join(", ")}`)
+      throw new Error("negatives not allowed " + negatives.join(" "))
     }
 
-    return parsedNumbers.reduce((sum, num) => sum + num, 0)
-  }
+    // Ignore if more then 1000
+    const sum = nums.reduce((acc, cur) => (cur > 1000 ? acc : acc + cur), 0)
 
+    // Trigger the event callbacks
+    for (const callback of this.addOccurred) {
+      callback(numbers, sum)
+    }
+
+    return sum
+  }
+  // simple to count callCount
   public getCalledCount(): number {
-    return StringCalculator.callCount
+    return this.callCount
   }
 }
